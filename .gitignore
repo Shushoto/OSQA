@@ -1,3 +1,7 @@
 *.iml
 *.ipr
 *.iws
+*.pyc
+*.log
+/cache/
+/settings_local.py
