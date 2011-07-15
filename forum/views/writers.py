@@ -2,6 +2,8 @@
 import os.path
 import time, datetime, random
 import logging
+
+from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render_to_response, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse, Http404
@@ -10,17 +12,19 @@ from django.utils.html import *
 from django.utils import simplejson
 from django.utils.translation import ugettext as _
 from django.core.urlresolvers import reverse
-from django.core.exceptions import PermissionDenied
 
-from forum.actions import AskAction, AnswerAction, ReviseAction, RollbackAction, RetagAction, AnswerToQuestionAction
+from django.core.exceptions import PermissionDenied
+from forum.actions import AskAction, AnswerAction, ReviseAction, RollbackAction, RetagAction, AnswerToQuestionAction, CommentToQuestionAction
 from forum.forms import *
 from forum.models import *
 from forum.forms import get_next_url
 from forum.utils import html
+
 from forum.http_responses import HttpResponseUnauthorized
 
 from vars import PENDING_SUBMISSION_SESSION_ATTR
 
+@csrf_exempt
 def upload(request):#ajax upload file to a question or answer
     class FileTypeNotAllow(Exception):
         pass
@@ -114,13 +118,20 @@ def ask(request):
 
 def convert_to_question(request, id):
     user = request.user
-    answer = get_object_or_404(Answer, id=id)
 
-    if not user.can_convert_to_question(answer):
+    node_type = request.GET.get('node_type', 'answer')
+    if node_type == 'comment':
+        node = get_object_or_404(Comment, id=id)
+        action_class = CommentToQuestionAction
+    else:
+        node = get_object_or_404(Answer, id=id)
+        action_class = AnswerToQuestionAction
+
+    if not user.can_convert_to_question(node):
         return HttpResponseUnauthorized(request)
 
-    return _edit_question(request, answer, template='node/convert_to_question.html', summary=_("Converted to question"),
-                           action_class=AnswerToQuestionAction, allow_rollback=False, url_getter=lambda a: Question.objects.get(id=a.id).get_absolute_url())
+    return _edit_question(request, node, template='node/convert_to_question.html', summary=_("Converted to question"),
+                           action_class =action_class, allow_rollback=False, url_getter=lambda a: Question.objects.get(id=a.id).get_absolute_url())
 
 def edit_question(request, id):
     question = get_object_or_404(Question, id=id)

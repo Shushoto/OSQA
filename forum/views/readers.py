@@ -93,7 +93,7 @@ def get_unanswered_questions():
     accepted = Question.objects.filter(children__marked=True).distinct()
     upvoted = Question.objects.filter(children__score__gt=0).distinct()
     answered = accepted | upvoted
-    unanswered = Question.objects.exclude(id__in=answered)
+    unanswered = Question.objects.exclude(id__in=answered).exclude(marked=True)
     return unanswered
 
 @decorators.render('questions.html', 'unanswered', _('unanswered'), weight=400)
@@ -169,7 +169,8 @@ def question_list(request, initial,
                   allowIgnoreTags=True,
                   feed_url=None,
                   paginator_context=None,
-                  feed_sort=('-added_at',)):
+                  feed_sort=('-added_at',),
+                  feed_req_params_exclude=(_('page'), _('pagesize'), _('sort'))):
 
     questions = initial.filter_state(deleted=False)
 
@@ -192,7 +193,8 @@ def question_list(request, initial,
     #answer_description = _("answers")
 
     if not feed_url:
-        req_params = generate_uri(request.GET, (_('page'), _('pagesize'), _('sort')))
+        req_params = generate_uri(request.GET, feed_req_params_exclude)
+
         if req_params:
             req_params = '&' + req_params
 
@@ -373,6 +375,7 @@ def question(request, id, slug='', answer=None):
     "answers" : answers,
     "similar_questions" : question.get_related_questions(),
     "subscription": subscription,
+    "embed_youtube_videos" : settings.EMBED_YOUTUBE_VIDEOS,
     })
 
 

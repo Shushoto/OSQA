@@ -24,7 +24,7 @@ from django.core.urlresolvers import reverse
 register = template.Library()
 
 GRAVATAR_TEMPLATE = ('<img class="gravatar" width="%(size)s" height="%(size)s" '
-'src="http://www.gravatar.com/avatar/%(gravatar_hash)s'
+'src="https://secure.gravatar.com/avatar/%(gravatar_hash)s'
 '?s=%(size)s&amp;d=%(default)s&amp;r=%(rating)s" '
 'alt="%(username)s\'s gravatar image" />')
 
@@ -98,7 +98,7 @@ def get_accept_rate(user):
     # If the user has more than one accepted answers the rate title will be in plural.
     if accepted_answers_count > 1:
         accept_rate_number_title = _('%(user)s has %(count)d accepted answers') % {
-            'user' :  user.username,
+            'user' :  smart_unicode(user.username),
             'count' : int(accepted_answers_count)
         }
     # If the user has one accepted answer we'll be using singular.
@@ -169,6 +169,24 @@ def media(url):
 
         url = url_prefix + url
         return url
+
+@register.simple_tag
+def get_tag_font_size(tag):
+    occurrences_of_current_tag = tag.used_count
+
+    # Occurrences count settings
+    min_occurs = int(settings.TAGS_CLOUD_MIN_OCCURS)
+    max_occurs = int(settings.TAGS_CLOUD_MAX_OCCURS)
+
+    # Font size settings
+    min_font_size = int(settings.TAGS_CLOUD_MIN_FONT_SIZE)
+    max_font_size = int(settings.TAGS_CLOUD_MAX_FONT_SIZE)
+
+    # Calculate the font size of the tag according to the occurrences count
+    weight = (math.log(occurrences_of_current_tag)-math.log(min_occurs))/(math.log(max_occurs)-math.log(min_occurs))
+    font_size_of_current_tag = min_font_size + int(math.floor((max_font_size-min_font_size)*weight))
+
+    return font_size_of_current_tag
 
 class ItemSeparatorNode(template.Node):
     def __init__(self, separator):
@@ -277,6 +295,7 @@ class DeclareNode(template.Node):
                 d['os'] = os
                 d['html'] = html
                 d['reverse'] = reverse
+                d['settings'] = settings
                 d['smart_str'] = smart_str
                 d['smart_unicode'] = smart_unicode
                 d['force_unicode'] = force_unicode
@@ -287,7 +306,6 @@ class DeclareNode(template.Node):
                     context[m.group(1).strip()] = eval(command, d)
                 except Exception, e:
                     logging.error("Error in declare tag, when evaluating: %s" % m.group(3).strip())
-                    raise
         return ''
 
 @register.tag(name='declare')

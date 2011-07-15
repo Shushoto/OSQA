@@ -2,6 +2,7 @@
  * We do not want the CSRF protection enabled for the AJAX post requests, it causes only trouble.
  * Get the csrftoken cookie and pass it to the X-CSRFToken HTTP request property.
  */
+
 $('html').ajaxSend(function(event, xhr, settings) {
     function getCookie(name) {
         var cookieValue = null;
@@ -18,10 +19,12 @@ $('html').ajaxSend(function(event, xhr, settings) {
         }
         return cookieValue;
     }
-    if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
-        // Only send the token to relative URLs i.e. locally.
-        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
-    }
+    try {
+        if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+            // Only send the token to relative URLs i.e. locally.
+            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+        }
+    } catch (e) {}
 });
 
 var response_commands = {
@@ -364,7 +367,28 @@ function end_command(success) {
     }
 }
 
+var comment_box_cursor_position = 0;
+function canned_comment(post_id, comment) {
+    textarea = $('#comment-' + post_id + '-form textarea')
+
+    // Get the text from the beginning to the caret
+    textarea_start = textarea.val().substr(0, comment_box_cursor_position)
+
+    // Get the text from the caret to the end
+    textarea_end = textarea.val().substr(comment_box_cursor_position, textarea.val().length)
+
+    textarea.val(textarea_start + comment + textarea_end);
+}
+
 $(function() {
+    $('textarea.commentBox').bind('keydown keyup mousedown mouseup mousemove', function(evt) {
+        comment_box_cursor_position = $(this).caret().start;
+    });
+
+    $('textarea.commentBox').blur(function() {
+        //alert(comment_box_cursor_position);
+    });
+
     $('a.ajax-command').live('click', function(evt) {
         if (running) return false;
 
@@ -572,7 +596,7 @@ $(function() {
                 }
 
                 start_command();
-                $.post($form.attr('action'), $form.serialize(), function(data) {
+                $.post($form.attr('action'), post_data, function(data) {
                     process_ajax_response(data, evt, function(error) {
                         if (!error) {
                             cleanup_form();
@@ -728,7 +752,7 @@ function pickedTags(){
                 tag_link.attr('rel','tag');
                 tag_link.attr('href', scriptUrl + $.i18n._('tags/') + tagname + '/');
                 tag_link.html(tagname);
-                var del_link = $('<img></img>');
+                var del_link = $('<img />');
                 del_link.addClass('delete-icon');
                 del_link.attr('src', mediaUrl('media/images/close-small-dark.png'));
 

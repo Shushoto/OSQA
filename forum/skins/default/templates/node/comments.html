@@ -24,6 +24,8 @@
                 {% if comment.can_convert %}
                     <a rel="nofollow" id="comment-{{ comment.id }}-convert" href="{% url convert_comment id=comment.id %}" title="{% trans "Convert comment to answer" %}"
                         class="ajax-command comment-convert confirm" rel="nofollow"> </a>
+                    <a rel="nofollow" id="comment-{{ comment.id }}-convert-to-question" href="{% url convert_to_question id=comment.id %}?node_type=comment" title="{% trans "Convert comment to question" %}"
+                        class="comment-convert-to-question" rel="nofollow"> </a>
                 {% endif %}
                     
 
@@ -50,7 +52,7 @@
     <form id="comment-{{ post.id }}-form" method="post" action="{% url comment id=post.id %}" accept-charset="utf-8">
         {% csrf_token %}
         <div class="comment-form-widgets-container">
-            <textarea name="comment" class="commentBox"></textarea>
+            <textarea name="comment" class="commentBox" id="comment"></textarea>
             <div class="comment-form-buttons">
                 <span id="comment-{{ post.id }}-chars-left" class="comment-chars-left">
                     <span class="comments-char-left-count">{{ min_length }}|{{ max_length }}</span>
@@ -60,6 +62,21 @@
                 <input type="submit" class="comment-submit" value="{% trans " comment" %}" />
                 <input type="submit" class="comment-cancel" value="{% trans " cancel" %}" />
             </div>
+            <div class="clear"></div>
+            {% if user.can_use_canned_comments %}
+            <div class="canned_comment">
+                <span id="post-{{ post.id }}-menu" class="context-menu">
+                    <span id="post-{{ post.id }}-menu-trigger" class="action-link context-menu-trigger">{% trans "Use canned comment" %}</span>
+                    <ul id="post-{{ post.id }}-menu-dropdown" class="context-menu-dropdown" style="width: 275px;">
+                        {% for canned_comment in canned_comments %}
+                        <li class="item">
+                            <a style="white-space: pre-wrap;" href="javascript:void(0);" onclick="canned_comment({{ post.id }}, jQuery(this).text())">{{ canned_comment }}</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </span>
+            </div>
+            {% endif %}
         </div>
         <script type="text/html" class="new-comment-skeleton" id="new-comment-skeleton-{{ post.id }}">
             <div class="comment{% if not comment.top_scorer %} not_top_scorer{% endif %}" id="comment-%ID%">
